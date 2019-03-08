@@ -146,6 +146,7 @@ namespace Microsoft.Azure.Devices.Client.Transport
 
         private static bool IsNetwork(Exception singleException)
         {
+            // TODO: is.
             return s_networkExceptions.Contains(singleException.GetType());
         }
 
