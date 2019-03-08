@@ -106,7 +106,7 @@ namespace Microsoft.Azure.Devices.E2ETests
                     sw.Stop();
                     Console.Write(
                         $"{_protocol} parallel: {_parallelCount}, totalMessages: {_messageCount} @ {_messageSize}B:" + 
-                        $" {interimStatCompleted / sw.Elapsed.TotalSeconds:    0.00}RPS {100 * (_messageCount - remainingMessages)/_messageCount}%\r");
+                        $" {interimStatCompleted / sw.Elapsed.TotalSeconds:    0.00}RPS {100 * (_messageCount - remainingMessages)/_messageCount}%          \r");
 
                     sw.Restart();
                     interimStatCompleted = 0;

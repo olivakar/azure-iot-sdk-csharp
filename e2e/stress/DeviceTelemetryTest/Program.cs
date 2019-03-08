@@ -20,8 +20,8 @@ namespace Microsoft.Azure.Devices.E2ETests
 
             TransportType[] transportTests =
             {
-                TransportType.Http1,
                 TransportType.Amqp,
+                TransportType.Http1,
                 TransportType.Mqtt
             };
 
