@@ -467,6 +467,9 @@ namespace Microsoft.Azure.Devices.Client.Transport
         {
             if (Volatile.Read(ref _opened)) return;
 
+            // TODO: if the internal subscription failed to recover according to policy, we should reconnect 
+            //       links if the application calls OpenAsync again.
+
             await _handlerLock.WaitAsync().ConfigureAwait(false);
             try
             {
