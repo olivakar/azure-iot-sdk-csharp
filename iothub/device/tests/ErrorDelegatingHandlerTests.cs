@@ -25,71 +25,61 @@ namespace Microsoft.Azure.Devices.Client.Test
     public class ErrorDelegatingHandlerTests
     {
         private const string ErrorMessage = "Error occurred.";
-#if 0
-        private static readonly Tuple<Type, Type, Func<Exception>>[] TestMatrix = new Tuple<Type, Type, Func<Exception>>[]()
+        
+        public static IEnumerable<object[]> TestMatrix
         {
-            // NonTransient Exception
-            { typeof(MessageTooLargeException), typeof(MessageTooLargeException), () => new MessageTooLargeException(ErrorMessage) },
-            { typeof(DeviceMessageLockLostException), () => new DeviceMessageLockLostException(ErrorMessage) },
-            { typeof(UnauthorizedException), () => new UnauthorizedException(ErrorMessage) },
-            { typeof(IotHubNotFoundException), () => new IotHubNotFoundException(ErrorMessage) },
-            { typeof(DeviceNotFoundException), () => new DeviceNotFoundException(ErrorMessage) },
-            { typeof(QuotaExceededException), () => new QuotaExceededException(ErrorMessage) },
-            { typeof(IotHubException), () => new IotHubException(ErrorMessage) },
-            { typeof(ObjectDisposedException), () => new ObjectDisposedException(ErrorMessage) },
+            get
             {
-                typeof(TestSecurityException), () => new Exception(
-                                                  "Test top level",
-                                                  new Exception(
-                                                      "Inner exception",
-                                                      new AuthenticationException()))
-            },
+                // NonTransient Exception
+                yield return CreateTuple(typeof(MessageTooLargeException), typeof(MessageTooLargeException));
+                yield return CreateTuple(typeof(DeviceMessageLockLostException), typeof(DeviceMessageLockLostException));
+                yield return CreateTuple(typeof(UnauthorizedException), typeof(UnauthorizedException));
+                yield return CreateTuple(typeof(IotHubNotFoundException), typeof(IotHubNotFoundException));
+                yield return CreateTuple(typeof(DeviceNotFoundException), typeof(DeviceNotFoundException));
+                yield return CreateTuple(typeof(QuotaExceededException), typeof(QuotaExceededException));
+                yield return CreateTuple(typeof(IotHubException), typeof(IotHubException));
+                yield return CreateTuple(typeof(ObjectDisposedException), typeof(ObjectDisposedException));
 
+                // Security Exceptions
+                yield return CreateTuple(typeof(AuthenticationException), typeof(AuthenticationException));
+                Func<Exception> innerSecurityExceptionFactory = () => new Exception(
+                        "Test top level",
+                        new Exception(
+                            "Inner exception",
+                            new AuthenticationException()));
+                yield return new object[] { typeof(TestSecurityException), typeof(TestSecurityException), innerSecurityExceptionFactory };
+
+                // Transient network exceptions
+//                yield return CreateTuple(typeof(IotHubCommunicationException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(IOException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(TimeoutException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(OperationCanceledException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(TaskCanceledException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(SocketException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(HttpRequestException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(WebException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(WebSocketException), typeof(IotHubCommunicationException));
+//                yield return CreateTuple(typeof(CodecException), typeof(IotHubCommunicationException));
+//                // TODO: add MQTT and AMQP
+//                //yield return CreateTuple(typeof(AmqpException), typeof(IotHubCommunicationException));
+//
+//
+//                // Transient server exceptions
+//                yield return CreateTuple(typeof(ServerBusyException), typeof(ServerBusyException));
+//                yield return CreateTuple(typeof(IotHubThrottledException), typeof(IotHubThrottledException));
+            }
         }
 
-
-        private static readonly Dictionary<Type, Func<Exception>> s_nonTransientExceptions = new Dictionary<Type, Func<Exception>>
+        private static object[] CreateTuple(Type triggerException, Type expectedException)
         {
-            { typeof(MessageTooLargeException), () => new MessageTooLargeException(ErrorMessage) },
-            { typeof(DeviceMessageLockLostException), () => new DeviceMessageLockLostException(ErrorMessage) },
-            { typeof(UnauthorizedException), () => new UnauthorizedException(ErrorMessage) },
-            { typeof(IotHubNotFoundException), () => new IotHubNotFoundException(ErrorMessage) },
-            { typeof(DeviceNotFoundException), () => new DeviceNotFoundException(ErrorMessage) },
-            { typeof(QuotaExceededException), () => new QuotaExceededException(ErrorMessage) },
-            { typeof(IotHubException), () => new IotHubException(ErrorMessage) },
-            { typeof(ObjectDisposedException), () => new ObjectDisposedException(ErrorMessage) },
-            { typeof(TestSecurityException), () => new Exception(
-                                                "Test top level",
-                                                new Exception(
-                                                    "Inner exception",
-                                                    new AuthenticationException()))
-            },
-        };
+            Func<Exception> factory = () => (Exception)Activator.CreateInstance(triggerException, ErrorMessage);
 
-        private static readonly Dictionary<Type, Func<Exception>> s_transientNetworkErrors = new Dictionary<Type, Func<Exception>>
-        {
-            { typeof(IotHubCommunicationException), () => new IotHubCommunicationException(ErrorMessage) },
-            { typeof(IOException), () => new IOException(ErrorMessage) },
-            { typeof(TimeoutException), () => new TimeoutException(ErrorMessage) },
-            { typeof(OperationCanceledException), () => new OperationCanceledException(ErrorMessage) },
-            { typeof(TaskCanceledException), () => new TaskCanceledException(ErrorMessage) },
-            { typeof(SocketException), () => new SocketException(1) },
-            { typeof(HttpRequestException), () => new HttpRequestException() },
-            { typeof(WebException), () => new WebException() },
-            { typeof(AmqpException), () => new AmqpException(new Amqp.Framing.Error()) },
-            { typeof(WebSocketException), () => new WebSocketException() },
-            { typeof(CodecException), () => new CodecException() },
-            // TODO: add MQTT and AMQP
-        };
-
-        private static readonly Dictionary<Type, Func<Exception>> s_transientServerErrors = new Dictionary<Type, Func<Exception>>
-        { 
-            // TODO: add more exception
-            { typeof(ServerBusyException), () => new ServerBusyException(ErrorMessage) },
-            { typeof(IotHubThrottledException), () => new IotHubThrottledException(ErrorMessage, null) },
-        };
-
-#endif
+            return new object[] {
+                expectedException,
+                triggerException,
+                factory
+            };
+        }
 
         public class TestSecurityException : Exception
         {
@@ -116,36 +106,10 @@ namespace Microsoft.Azure.Devices.Client.Test
             await innerHandler.Received(1).OpenAsync(cancellationToken).ConfigureAwait(false);
             await innerHandler.Received(1).SendEventAsync(Arg.Any<Message>(), cancellationToken).ConfigureAwait(false);
         }
-
-        [TestMethod]
-        [DataRow(typeof(IOException), typeof(IOException), )]
-        public async Task ErrorHandler_TransientNetworkErrorOccuredChannelIsAlive_ChannelIsTheSame()
-        {
-            foreach (Type exceptionType in s_transientNetworkErrors.Keys)
-            {
-                await TestExceptionThrown(exceptionType, typeof(IotHubCommunicationException)).ConfigureAwait(false);
-            }
-        }
-
-        [TestMethod]
-        public async Task ErrorHandler_TransientServerErrorOccuredChannelIsAlive_ChannelIsTheSame()
-        {
-            foreach (Type exceptionType in s_transientServerErrors.Keys)
-            {
-                await TestExceptionThrown(exceptionType, exceptionType).ConfigureAwait(false);
-            }
-        }
-
-        [TestMethod]
-        public async Task ErrorHandler_NonTransientErrorOccured_ChannelIsRecreated()
-        {
-            foreach (Type exceptionType in s_nonTransientExceptions.Keys)
-            {
-                await TestExceptionThrown(exceptionType, exceptionType).ConfigureAwait(false);
-            }
-        }
-
-        static async Task TestExceptionThrown(Type thrownExceptionType, Type expectedExceptionType)
+        
+        [DataTestMethod]
+        [DynamicData(nameof(TestMatrix), DynamicDataSourceType.Property)]
+        public async Task ErrorHandler_ExceptionOccured_Ok(Type thrownExceptionType, Type expectedExceptionType, Func<Exception> exceptionFactory)
         {
             var message = new Message(new byte[0]);
             var cancellationToken = new CancellationToken();
@@ -154,7 +118,7 @@ namespace Microsoft.Azure.Devices.Client.Test
                 di => di.SendEventAsync(Arg.Is(message), Arg.Any<CancellationToken>()), 
                 di => di.SendEventAsync(message, cancellationToken), 
                 di => di.Received(2).SendEventAsync(Arg.Is(message), Arg.Any<CancellationToken>()), 
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
 
             IEnumerable<Message> messages = new[] { new Message(new byte[0])};
 
@@ -162,13 +126,13 @@ namespace Microsoft.Azure.Devices.Client.Test
                 di => di.SendEventAsync(Arg.Is(message), Arg.Any<CancellationToken>()),
                 di => di.SendEventAsync(message, cancellationToken),
                 di => di.Received(2).SendEventAsync(Arg.Is(message), Arg.Any<CancellationToken>()),
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
 
             await OpenAsync_ExceptionThrownAndThenSucceed_SuccessfullyOpened(
                 di => di.OpenAsync(Arg.Any<CancellationToken>()),
                 di => di.OpenAsync(cancellationToken),
                 di => di.Received(2).OpenAsync(Arg.Any<CancellationToken>()),
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
 
             string lockToken = "lockToken";
 
@@ -176,32 +140,32 @@ namespace Microsoft.Azure.Devices.Client.Test
                 di => di.CompleteAsync(Arg.Is(lockToken), Arg.Any<CancellationToken>()),
                 di => di.CompleteAsync(lockToken, cancellationToken),
                 di => di.Received(2).CompleteAsync(Arg.Is(lockToken), Arg.Any<CancellationToken>()),
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
 
             await OperationAsync_ExceptionThrownAndThenSucceed_OperationSuccessfullyCompleted(
                 di => di.AbandonAsync(Arg.Is(lockToken), Arg.Any<CancellationToken>()),
                 di => di.AbandonAsync(lockToken, cancellationToken),
                 di => di.Received(2).AbandonAsync(Arg.Is(lockToken), Arg.Any<CancellationToken>()),
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
 
             await OperationAsync_ExceptionThrownAndThenSucceed_OperationSuccessfullyCompleted(
                 di => di.RejectAsync(Arg.Is(lockToken), Arg.Any<CancellationToken>()),
                 di => di.RejectAsync(lockToken, cancellationToken),
                 di => di.Received(2).RejectAsync(Arg.Is(lockToken), Arg.Any<CancellationToken>()),
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
 
             TimeSpan timeout = TimeSpan.FromSeconds(1);
             await OperationAsync_ExceptionThrownAndThenSucceed_OperationSuccessfullyCompleted(
                 di => di.ReceiveAsync(Arg.Is(timeout), Arg.Any<CancellationToken>()),
                 di => di.ReceiveAsync(timeout, cancellationToken),
                 di => di.Received(2).ReceiveAsync(Arg.Is(timeout), Arg.Any<CancellationToken>()),
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
 
             await OperationAsync_ExceptionThrownAndThenSucceed_OperationSuccessfullyCompleted(
                 di => di.ReceiveAsync(Arg.Any<CancellationToken>()),
                 di => di.ReceiveAsync(cancellationToken),
                 di => di.Received(2).ReceiveAsync(Arg.Any<CancellationToken>()),
-                thrownExceptionType, expectedExceptionType).ConfigureAwait(false);
+                thrownExceptionType, expectedExceptionType, exceptionFactory).ConfigureAwait(false);
         }
 
         static async Task OperationAsync_ExceptionThrownAndThenSucceed_OperationSuccessfullyCompleted(
@@ -209,7 +173,8 @@ namespace Microsoft.Azure.Devices.Client.Test
             Func<IDelegatingHandler, Task<Message>> act, 
             Func<IDelegatingHandler, Task<Message>> assert, 
             Type thrownExceptionType, 
-            Type expectedExceptionType)
+            Type expectedExceptionType, 
+            Func<Exception> exceptionFactory)
         {
             var contextMock = Substitute.For<IPipelineContext>();
             var innerHandler = Substitute.For<IDelegatingHandler>();
@@ -230,14 +195,14 @@ namespace Microsoft.Azure.Devices.Client.Test
                     return Task.FromResult(new Message());
                 }
 
-                throw ExceptionFactory(thrownExceptionType);
+                throw exceptionFactory();
             });
 
             //act
             await ((Func<Task>)(() => act(sut))).ExpectedAsync(expectedExceptionType).ConfigureAwait(false);
 
             //override outcome
-            setup[0] = true;//otherwise previosly setup call will happen and throw;
+            setup[0] = true;//otherwise previously setup call will happen and throw;
             mockSetup(innerHandler).Returns(new Message());
 
             //act
@@ -253,7 +218,8 @@ namespace Microsoft.Azure.Devices.Client.Test
             Func<IDelegatingHandler, Task> act, 
             Func<IDelegatingHandler, Task> assert, 
             Type thrownExceptionType, 
-            Type expectedExceptionType)
+            Type expectedExceptionType, 
+            Func<Exception> exceptionFactory)
         {
             var contextMock = Substitute.For<IPipelineContext>();
             var innerHandler = Substitute.For<IDelegatingHandler>();
@@ -274,14 +240,14 @@ namespace Microsoft.Azure.Devices.Client.Test
                     return Task.CompletedTask;
                 }
 
-                throw ExceptionFactory(thrownExceptionType);
+                throw exceptionFactory();
             });
 
             //act
             await ((Func<Task>)(() => act(sut))).ExpectedAsync(expectedExceptionType).ConfigureAwait(false);
 
             //override outcome
-            setup[0] = true;//otherwise previosly setup call will happen and throw;
+            setup[0] = true;//otherwise previously setup call will happen and throw;
             mockSetup(innerHandler).Returns(Task.CompletedTask);
 
             //act
@@ -297,7 +263,8 @@ namespace Microsoft.Azure.Devices.Client.Test
             Func<IDelegatingHandler, Task> act, 
             Func<IDelegatingHandler, Task> assert, 
             Type thrownExceptionType, 
-            Type expectedExceptionType)
+            Type expectedExceptionType,
+            Func<Exception> exceptionFactory)
         {
             var contextMock = Substitute.For<IPipelineContext>();
             var innerHandler = Substitute.For<IDelegatingHandler>();
@@ -313,7 +280,7 @@ namespace Microsoft.Azure.Devices.Client.Test
                     return Task.FromResult(Guid.NewGuid());
                 }
 
-                throw ExceptionFactory(thrownExceptionType);
+                throw exceptionFactory();
             });
 
             //act
@@ -328,25 +295,6 @@ namespace Microsoft.Azure.Devices.Client.Test
 
             //assert
             await assert(innerHandler).ConfigureAwait(false);
-        }
-
-        private static Exception ExceptionFactory(Type exceptionType)
-        {
-            if (s_transientNetworkErrors.ContainsKey(exceptionType))
-            {
-                return s_transientNetworkErrors[exceptionType]();
-            }
-            if (s_transientServerErrors.ContainsKey(exceptionType))
-            {
-                return s_transientServerErrors[exceptionType]();
-            }
-            else if (s_nonTransientExceptions.ContainsKey(exceptionType))
-            {
-                return s_nonTransientExceptions[exceptionType]();
-            }
-
-            Assert.Fail("Unknown exception type");
-            return null;
         }
     }
 }
