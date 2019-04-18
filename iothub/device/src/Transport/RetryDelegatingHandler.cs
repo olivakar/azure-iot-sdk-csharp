@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 using Microsoft.Azure.Devices.Client.Exceptions;
+using Microsoft.Azure.Devices.Client.Extensions;
 using Microsoft.Azure.Devices.Client.TransientFaultHandling;
 using Microsoft.Azure.Devices.Shared;
 using System;
@@ -431,26 +432,21 @@ namespace Microsoft.Azure.Devices.Client.Transport
 
         public override async Task CloseAsync(CancellationToken cancellationToken)
         {
+            if (Logging.IsEnabled) Logging.Enter(this, cancellationToken, nameof(CloseAsync));
+
             try
             {
                 await _handlerLock.WaitAsync().ConfigureAwait(false);
                 if (!_openCalled) return;
+
+                _handleDisconnectCts.Cancel();
+                await base.CloseAsync(cancellationToken).ConfigureAwait(false);
+                _openCalled = false;
+                _opened = false;
             }
             finally
             {
                 _handlerLock.Release();
-            }
-
-            try
-            {
-                if (Logging.IsEnabled) Logging.Enter(this, cancellationToken, nameof(CloseAsync));
-
-                _handleDisconnectCts.Cancel();
-                await base.CloseAsync(cancellationToken).ConfigureAwait(false);
-                Dispose(true);
-            }
-            finally
-            {
                 if (Logging.IsEnabled) Logging.Exit(this, cancellationToken, nameof(CloseAsync));
             }
         }
@@ -529,17 +525,7 @@ namespace Microsoft.Azure.Devices.Client.Transport
 
             try
             {
-                // No reason to reconnect at this moment.
-                if (!(_methodsEnabled || _twinEnabled || _eventsEnabled))
-                {
-                    _onConnectionStatusChanged(ConnectionStatus.Disconnected, ConnectionStatusChangeReason.Communication_Error);
-                    return;
-                }
-                else
-                {
-                    _onConnectionStatusChanged(ConnectionStatus.Disconnected_Retrying, ConnectionStatusChangeReason.Communication_Error);
-                }
-
+                _onConnectionStatusChanged(ConnectionStatus.Disconnected_Retrying, ConnectionStatusChangeReason.Communication_Error);
                 CancellationToken cancellationToken = _handleDisconnectCts.Token;
                 
                 // This will recover to the state before the disconnect.
@@ -579,7 +565,7 @@ namespace Microsoft.Azure.Devices.Client.Transport
                 },
                 cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when !ex.IsFatal()
             {
                 if (Logging.IsEnabled) Logging.Error(this, ex.ToString(), nameof(HandleDisconnect));
 

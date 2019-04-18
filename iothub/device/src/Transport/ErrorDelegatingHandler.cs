@@ -33,7 +33,6 @@ namespace Microsoft.Azure.Devices.Client.Transport
             typeof(SocketException),
             typeof(ClosedChannelException),
             typeof(TimeoutException),
-            typeof(OperationCanceledException),
             typeof(HttpRequestException),
             typeof(WebException),
             typeof(AmqpException),
