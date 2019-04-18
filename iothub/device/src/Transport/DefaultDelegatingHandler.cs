@@ -167,6 +167,7 @@ namespace Microsoft.Azure.Devices.Client.Transport
 
         protected void ThrowIfDisposed()
         {
+            if (Logging.IsEnabled) Logging.Error(this, nameof(ObjectDisposedException), nameof(ThrowIfDisposed));
             if (_disposed) throw new ObjectDisposedException("IoT Client");
         }
 

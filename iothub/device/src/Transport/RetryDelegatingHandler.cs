@@ -565,7 +565,7 @@ namespace Microsoft.Azure.Devices.Client.Transport
                 },
                 cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex) when !ex.IsFatal()
+            catch (Exception ex) when (!ex.IsFatal())
             {
                 if (Logging.IsEnabled) Logging.Error(this, ex.ToString(), nameof(HandleDisconnect));
 

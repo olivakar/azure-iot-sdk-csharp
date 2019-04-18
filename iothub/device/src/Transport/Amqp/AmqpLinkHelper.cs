@@ -5,6 +5,7 @@ using Microsoft.Azure.Amqp;
 using Microsoft.Azure.Amqp.Framing;
 using Microsoft.Azure.Devices.Shared;
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
@@ -124,10 +125,9 @@ namespace Microsoft.Azure.Devices.Client.Transport.Amqp
             if (Logging.IsEnabled) Logging.Enter(receivingAmqpLink, timeout, $"{nameof(DisposeMessageAsync)}");
 
             AmqpMessage amqpMessage = null;
-            if (receivingAmqpLink != null)
-            {
-                amqpMessage = await receivingAmqpLink.ReceiveMessageAsync(timeout).ConfigureAwait(false);
-            }
+            Debug.Assert(receivingAmqpLink != null);
+            amqpMessage = await receivingAmqpLink.ReceiveMessageAsync(timeout).ConfigureAwait(false);
+
             if (Logging.IsEnabled) Logging.Exit(receivingAmqpLink, timeout, $"{nameof(DisposeMessageAsync)}");
             return amqpMessage;
         }

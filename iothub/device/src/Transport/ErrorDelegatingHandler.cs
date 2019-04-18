@@ -37,6 +37,7 @@ namespace Microsoft.Azure.Devices.Client.Transport
             typeof(WebException),
             typeof(AmqpException),
             typeof(WebSocketException),
+            typeof(OperationCanceledException),
         };
 
         public override Task OpenAsync(CancellationToken cancellationToken)
@@ -165,7 +166,7 @@ namespace Microsoft.Azure.Devices.Client.Transport
                 }
                 catch (Exception exception) when (!exception.IsFatal())
                 {
-                    if (Logging.IsEnabled) Logging.Error(this, $"Exception caught: {exception}");
+                    if (Logging.IsEnabled) Logging.Error(this, exception.ToString(), nameof(ExecuteWithErrorHandlingAsync));
 
                     if (IsSecurityExceptionChain(exception))
                     {

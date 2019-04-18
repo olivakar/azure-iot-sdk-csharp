@@ -100,6 +100,20 @@ namespace Microsoft.Azure.Devices.E2ETests
             await ReceiveSingleMessage(TestDeviceType.X509, Client.TransportType.Http1).ConfigureAwait(false);
         }
 
+        [TestMethod]
+        public async Task Message_DisposeWhileReceive_Throws_Amqp()
+        {
+            TestDevice testDevice = await TestDevice.GetTestDeviceAsync(DevicePrefix).ConfigureAwait(false);
+            
+            using (DeviceClient deviceClient = testDevice.CreateDeviceClient(Client.TransportType.Amqp_Tcp_Only))
+            {
+                Task receiveTask = deviceClient.ReceiveAsync();
+                deviceClient.Dispose();
+
+                await receiveTask.ConfigureAwait(false);
+            }
+        }
+
         private Client.Message ComposeD2CTestMessage(out string payload, out string p1Value)
         {
             payload = Guid.NewGuid().ToString();
